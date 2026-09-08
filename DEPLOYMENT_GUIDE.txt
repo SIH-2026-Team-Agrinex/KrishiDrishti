@@ -60,20 +60,15 @@ automatic scaling, and instant connection pooling at zero cost.
    DATABASE_URL="your_neon_connection_string_here"
 
 ================================================================================
-2. STEP 2: PUSH CODE TO GITHUB
+2. STEP 2: REPOSITORY ON GITHUB
 ================================================================================
 
-All temporary snapshots, test images, and caches have been removed. The root 
-`.gitignore` protects your secret `.env` files and binaries.
+Your codebase is already pushed and live on GitHub:
+Repository: https://github.com/SIH-2026-Team-Agrinex/KrishiDrishti
+Branch: main
 
-In your terminal (PowerShell or Bash in project root `d:\Vibe Coding\SIH`):
-
-   git init
-   git add .
-   git commit -m "feat: production ready agrinex platform with Neon DB"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git
-   git push -u origin main
+All secret `.env` files, temporary snapshots, and node_modules are excluded via 
+the root `.gitignore`.
 
 ================================================================================
 3. STEP 3: DEPLOY BACKEND ON RENDER.COM
