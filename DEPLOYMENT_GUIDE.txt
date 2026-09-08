@@ -1,0 +1,157 @@
+================================================================================
+     KRISHIDRISHTI / AGRI-NEX: PRODUCTION DEPLOYMENT GUIDE (100% FREE)
+                     STACK: VERCEL + RENDER + NEON DB
+================================================================================
+
+This guide outlines the exact, step-by-step deployment of your platform using:
+- FRONTEND: Vercel (Hobby Free Tier)
+- BACKEND:  Render.com (Free Native Python Web Service)
+- DATABASE: Neon.tech (Serverless PostgreSQL Free Tier)
+- ZERO credit cards required, $0/month cost forever.
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. Step 1: Set Up Free Neon PostgreSQL Database
+2. Step 2: Push Clean Code to GitHub
+3. Step 3: Deploy Backend on Render.com
+4. Step 4: Deploy Frontend on Vercel
+5. Step 5: Test and Verify Live Production System
+
+================================================================================
+1. STEP 1: SET UP FREE NEON POSTGRESQL DATABASE
+================================================================================
+
+Neon (https://neon.tech) provides serverless PostgreSQL with 0.5 GB storage,
+automatic scaling, and instant connection pooling at zero cost.
+
+1. Go to https://neon.tech and click "Sign Up" (Sign in with your GitHub account).
+2. Create a new project:
+   - Project Name: `agrinex-db`
+   - Region: Select nearest (e.g. `ap-southeast-1` or `eu-central-1`).
+   - Click "Create Project".
+
+3. Get your Connection String:
+   - On the Neon Dashboard, locate the "Connection Details" box.
+   - Ensure the dropdown is set to **"Pooled connection"** (recommended for web services).
+   - Copy the URI string. It will look like:
+     postgresql://alex:AbC123dEf@ep-cool-frog-123456-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require
+
+4. Create the `crop_reports` table:
+   - In the Neon console, click **"SQL Editor"** on the left menu.
+   - Paste this SQL query and click **"Run"**:
+
+   CREATE TABLE IF NOT EXISTS crop_reports (
+       id VARCHAR(64) PRIMARY KEY,
+       created_at TIMESTAMPTZ DEFAULT NOW(),
+       crop_identified VARCHAR(100),
+       condition_or_pest VARCHAR(150),
+       issue_type VARCHAR(50),
+       confidence FLOAT,
+       risk_level VARCHAR(50),
+       location_name VARCHAR(150),
+       latitude FLOAT,
+       longitude FLOAT,
+       raw_json TEXT NOT NULL
+   );
+
+5. Test locally (Optional):
+   Paste this connection string into your local `AgrineX_models/.env`:
+   DATABASE_URL="your_neon_connection_string_here"
+
+================================================================================
+2. STEP 2: PUSH CODE TO GITHUB
+================================================================================
+
+All temporary snapshots, test images, and caches have been removed. The root 
+`.gitignore` protects your secret `.env` files and binaries.
+
+In your terminal (PowerShell or Bash in project root `d:\Vibe Coding\SIH`):
+
+   git init
+   git add .
+   git commit -m "feat: production ready agrinex platform with Neon DB"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git
+   git push -u origin main
+
+================================================================================
+3. STEP 3: DEPLOY BACKEND ON RENDER.COM
+================================================================================
+
+1. Go to https://render.com and sign in with GitHub (Zero credit card needed).
+2. Click **"New +"** (top right) -> **"Web Service"**.
+3. Choose **"Build and deploy from a Git repository"** and select your repository.
+4. Fill in the service configuration:
+   - **Name**: `agrinex-api` (or any unique name)
+   - **Region**: Nearest to you (e.g. Singapore or Frankfurt)
+   - **Branch**: `main`
+   - **Root Directory**: `AgrineX_models`  <--- (CRITICAL: Do not forget this!)
+   - **Runtime**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn api_server:app --host 0.0.0.0 --port $PORT`
+   - **Instance Type**: Select **"Free"** ($0/month)
+
+5. Add Environment Variables (click "Advanced" -> "Add Environment Variable"):
+   - Key: `GROQ_API_KEY`
+     Value: `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` (or your key)
+   - Key: `DATABASE_URL`
+     Value: (Paste your Neon DB connection string from Step 1)
+   - Key: `ALLOWED_ORIGINS`
+     Value: `*`
+   - Key: `PYTHON_VERSION`
+     Value: `3.10.12`
+
+6. Click **"Deploy Web Service"**.
+   Render will install dependencies, load the Keras models, and start the API.
+   Once deployed, Render gives you a public HTTPS URL:
+   `https://agrinex-api.onrender.com`
+
+   Verify by opening:
+   - `https://agrinex-api.onrender.com/health` (should show status: "online", database: "connected")
+   - `https://agrinex-api.onrender.com/docs` (Swagger UI for your endpoints)
+
+================================================================================
+4. STEP 4: DEPLOY FRONTEND ON VERCEL
+================================================================================
+
+1. Go to https://vercel.com and log in with GitHub.
+2. Click **"Add New..."** -> **"Project"**.
+3. Select your repository.
+4. Configure Project Settings:
+   - **Framework Preset**: Vite
+   - **Root Directory**: Click "Edit" and choose `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+
+5. Add Environment Variables (Click the dropdown):
+   - Key: `VITE_USE_LOCAL_DB`
+     Value: `false`
+   - Key: `VITE_API_BASE_URL`
+     Value: `https://agrinex-api.onrender.com/api`  (Use your Render URL with /api)
+   - Key: `VITE_GROQ_API_KEY`
+     Value: `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`
+   - Key: `VITE_ENABLE_LIVE_OPEN_METEO_FALLBACK`
+     Value: `true`
+
+6. Click **"Deploy"**.
+   In ~40 seconds, your site will be live with a free custom SSL URL:
+   `https://your-project.vercel.app`
+
+================================================================================
+5. STEP 5: TEST AND VERIFY LIVE PRODUCTION SYSTEM
+================================================================================
+
+1. Open your live Vercel URL on mobile or desktop.
+2. The browser will grant Camera permissions securely over HTTPS.
+3. Snap or upload a crop leaf image:
+   - The diagnosis engine runs inference on Render.
+   - The Agronomist AI generates actionable remedies via Groq.
+   - The report is automatically committed to your Neon PostgreSQL cloud DB!
+4. Navigate to the "History" tab:
+   - Confirms that reports are fetched live from your Neon database.
+5. In Neon console -> "Tables" -> `crop_reports`:
+   - You can see your live stored records with full JSON diagnostics.
+
+Everything is live, permanent, resilient, and 100% Free!
+================================================================================

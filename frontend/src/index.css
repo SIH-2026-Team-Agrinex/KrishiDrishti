@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-heading: 'Outfit', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+}
+
+@theme {
+  --color-agro-50: #f0fdf4;
+  --color-agro-100: #dcfce7;
+  --color-agro-200: #bbf7d0;
+  --color-agro-300: #86efac;
+  --color-agro-400: #4ade80;
+  --color-agro-500: #22c55e;
+  --color-agro-600: #16a34a;
+  --color-agro-700: #15803d;
+  --color-agro-800: #166534;
+  --color-agro-900: #14532d;
+  --color-agro-950: #052e16;
+
+  --color-earth-50: #fdfbf7;
+  --color-earth-100: #f7f2ea;
+  --color-earth-200: #eee3d2;
+  --color-earth-300: #e0ccb2;
+  --color-earth-400: #cbb08f;
+  --color-earth-500: #b7956f;
+  --color-earth-600: #9e7956;
+  --color-earth-700: #7e5d43;
+  --color-earth-800: #674c39;
+  --color-earth-900: #543f31;
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(220, 252, 231, 0.7);
+    box-shadow: 0 10px 30px -10px rgba(22, 101, 52, 0.08);
+  }
+
+  .glass-card-dark {
+    background: rgba(5, 46, 22, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+  }
+
+  .text-gradient-agro {
+    background: linear-gradient(135deg, #15803d 0%, #16a34a 50%, #059669 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #eab308 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .bg-grid-pattern {
+    background-size: 32px 32px;
+    background-image: 
+      linear-gradient(to right, rgba(34, 197, 94, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(34, 197, 94, 0.05) 1px, transparent 1px);
+  }
+
+  .bg-dots-pattern {
+    background-image: radial-gradient(rgba(22, 163, 74, 0.12) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
+
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Print optimizations */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-break-inside {
+    break-inside: avoid;
+  }
+}
