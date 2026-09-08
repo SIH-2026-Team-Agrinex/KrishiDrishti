@@ -340,7 +340,28 @@ def format_class_label(raw_label: str) -> str:
     return clean
 
 
+@app.get("/")
+@app.get("/api")
+async def root_index():
+    return {
+        "status": "online",
+        "service": "KrishiDrishti AI (Agri-NEX) Production Backend",
+        "version": "2.0.0",
+        "documentation": "/docs",
+        "health": "/health",
+        "database": {
+            "status": "connected" if db_service.engine is not None else "offline",
+            "type": db_service.db_type
+        },
+        "models": {
+            "disease_model_classes": len(disease_classes),
+            "pest_model_classes": len(pest_classes)
+        }
+    }
+
+
 @app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {
         "status": "online",
@@ -360,6 +381,7 @@ async def health_check():
 
 
 @app.post("/api/crop-analysis")
+@app.post("/crop-analysis")
 async def analyze_crop(
     images: List[UploadFile] = File(...),
     video: Optional[UploadFile] = File(None),
@@ -631,6 +653,7 @@ async def analyze_crop(
 
 
 @app.get("/api/history")
+@app.get("/history")
 async def get_history(crop: Optional[str] = "ALL", risk: Optional[str] = "ALL", q: Optional[str] = None):
     # 1. Try querying connected database (PostgreSQL / SQLite)
     db_results = db_service.get_history(crop=crop, risk=risk, q=q)
@@ -655,6 +678,7 @@ async def get_history(crop: Optional[str] = "ALL", risk: Optional[str] = "ALL", 
 
 
 @app.get("/api/history/{report_id}")
+@app.get("/history/{report_id}")
 async def get_report_by_id(report_id: str):
     # Check database first
     db_report = db_service.get_report_by_id(report_id)
@@ -669,6 +693,7 @@ async def get_report_by_id(report_id: str):
 
 
 @app.delete("/api/history/{report_id}")
+@app.delete("/history/{report_id}")
 async def delete_report(report_id: str):
     global REPORTS_STORE
     db_service.delete_report(report_id)
@@ -677,6 +702,7 @@ async def delete_report(report_id: str):
 
 
 @app.post("/api/diagnose-and-chat")
+@app.post("/diagnose-and-chat")
 async def diagnose_and_chat(
     image: UploadFile = File(...),
     latitude: float = Form(21.1458),
@@ -747,6 +773,7 @@ class ReportAnalysisRequest(BaseModel):
 
 
 @app.post("/api/chat/analyze-report")
+@app.post("/chat/analyze-report")
 async def analyze_report_for_chat(request: ReportAnalysisRequest):
     """
     Called upon viewing any diagnostic test report.
@@ -853,6 +880,7 @@ Operational Rules:
 
 
 @app.post("/api/chat")
+@app.post("/chat")
 async def chat_reply(request: ChatRequest):
     """Direct chat endpoint powered by Groq LLaMA 3.3 70B with internet-level agronomic intelligence."""
     if not groq_client:
@@ -938,6 +966,7 @@ INTERNET-SCALE AGRONOMIC KNOWLEDGE DIRECTIVES:
 
 
 @app.get("/api/weather/current")
+@app.get("/weather/current")
 async def get_current_weather(lat: float = 21.1458, lon: float = 79.0882):
     loc_ctx = LocationService.create_location(latitude=lat, longitude=lon, source="gps")
     w = WeatherService.get_weather_for_location(loc_ctx)
@@ -970,6 +999,7 @@ class WeatherAdvisoryRequest(BaseModel):
 
 
 @app.post("/api/advisory/weather-advisory")
+@app.post("/advisory/weather-advisory")
 async def weather_advisory(payload: Optional[WeatherAdvisoryRequest] = None):
     w = payload.weather if payload and payload.weather else {}
     temp = float(w.get("temperature", 28.0))

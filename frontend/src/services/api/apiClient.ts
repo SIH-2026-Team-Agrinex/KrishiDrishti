@@ -1,17 +1,18 @@
 import { localDb } from '../db/localDb';
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-const baseUrl = rawBaseUrl.replace(/\/+$/, '');
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').trim().replace(/\/+$/, '');
+const baseUrl = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
+const isCustomBase = !!import.meta.env.VITE_API_BASE_URL;
 
 export const ENV_CONFIG = {
   USE_LOCAL_DB: import.meta.env.VITE_USE_LOCAL_DB === 'true',
   API_BASE_URL: baseUrl,
-  AUTH_API_URL: import.meta.env.VITE_AUTH_API_URL || `${baseUrl}/auth`,
-  WEATHER_API_URL: import.meta.env.VITE_WEATHER_API_URL || `${baseUrl}/weather`,
-  AI_ADVISORY_API_URL: import.meta.env.VITE_AI_ADVISORY_API_URL || `${baseUrl}/advisory`,
-  AI_CHAT_API_URL: import.meta.env.VITE_AI_CHAT_API_URL || `${baseUrl}/chat`,
-  CROP_ANALYSIS_API_URL: import.meta.env.VITE_CROP_ANALYSIS_API_URL || `${baseUrl}/crop-analysis`,
-  HISTORY_API_URL: import.meta.env.VITE_HISTORY_API_URL || `${baseUrl}/history`,
+  AUTH_API_URL: (!isCustomBase && import.meta.env.VITE_AUTH_API_URL) || `${baseUrl}/auth`,
+  WEATHER_API_URL: (!isCustomBase && import.meta.env.VITE_WEATHER_API_URL) || `${baseUrl}/weather`,
+  AI_ADVISORY_API_URL: (!isCustomBase && import.meta.env.VITE_AI_ADVISORY_API_URL) || `${baseUrl}/advisory`,
+  AI_CHAT_API_URL: (!isCustomBase && import.meta.env.VITE_AI_CHAT_API_URL) || `${baseUrl}/chat`,
+  CROP_ANALYSIS_API_URL: (!isCustomBase && import.meta.env.VITE_CROP_ANALYSIS_API_URL) || `${baseUrl}/crop-analysis`,
+  HISTORY_API_URL: (!isCustomBase && import.meta.env.VITE_HISTORY_API_URL) || `${baseUrl}/history`,
   ENABLE_LIVE_OPEN_METEO: import.meta.env.VITE_ENABLE_LIVE_OPEN_METEO_FALLBACK !== 'false',
   // Direct Online Model API Keys
   GEMINI_API_KEY: (import.meta.env.VITE_GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, ''),
