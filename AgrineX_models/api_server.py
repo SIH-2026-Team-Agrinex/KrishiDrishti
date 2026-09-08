@@ -6,6 +6,12 @@ with real-time environmental telemetry and Groq LLM Agronomist Advisor (chat_agr
 
 import os
 import sys
+
+# Prevent Linux cgroup oneDNN CPU instruction segfault (exit code 139) on Render / cloud
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
 import time
 import json
 import base64
@@ -22,7 +28,6 @@ if PROJECT_ROOT not in sys.path:
 
 import cv2
 import numpy as np
-import tensorflow as tf
 import requests
 from pydantic import BaseModel
 from fastapi import FastAPI, UploadFile, Form, File, HTTPException
@@ -194,21 +199,109 @@ PEST_METADATA: Dict[str, Dict[str, Any]] = {
     }
 }
 
-# 2. Load Vision Models & Class Labels at Startup
-print("[INFO] Loading Vision Models into Memory...")
-disease_model_path = os.path.join(PROJECT_ROOT, "model", "diseases_model.keras")
-pest_model_path = os.path.join(PROJECT_ROOT, "model", "pests_model.keras")
-
-disease_model = tf.keras.models.load_model(disease_model_path)
-pest_model = tf.keras.models.load_model(pest_model_path)
+# 2. Vision Models & Class Labels (Optimized for Render Cloud / TFLite Low-Memory Inference)
+DISEASE_TFLITE_PATH = os.path.join(PROJECT_ROOT, "model", "diseases_model.tflite")
+PEST_TFLITE_PATH = os.path.join(PROJECT_ROOT, "model", "pests_model.tflite")
+DISEASE_KERAS_PATH = os.path.join(PROJECT_ROOT, "model", "diseases_model.keras")
+PEST_KERAS_PATH = os.path.join(PROJECT_ROOT, "model", "pests_model.keras")
 
 with open(os.path.join(PROJECT_ROOT, "model", "diseases_classes.json"), "r") as f:
     disease_classes: List[str] = json.load(f)
 with open(os.path.join(PROJECT_ROOT, "model", "pests_classes.json"), "r") as f:
     pest_classes: List[str] = json.load(f)
 
-print(f"[INFO] Loaded disease model with {len(disease_classes)} classes.")
-print(f"[INFO] Loaded pest model with {len(pest_classes)} classes.")
+_disease_interpreter = None
+_pest_interpreter = None
+_disease_keras_model = None
+_pest_keras_model = None
+
+
+def get_disease_model():
+    """Loads lightweight TFLite model on demand, falling back to Keras if needed."""
+    global _disease_interpreter, _disease_keras_model
+    if _disease_interpreter is not None:
+        return _disease_interpreter
+    if _disease_keras_model is not None:
+        return _disease_keras_model
+
+    if os.path.exists(DISEASE_TFLITE_PATH):
+        try:
+            from tensorflow.lite.python.interpreter import Interpreter
+            interp = Interpreter(model_path=DISEASE_TFLITE_PATH)
+            interp.allocate_tensors()
+            _disease_interpreter = interp
+            print("[INFO] Initialized lightweight TFLite disease model.")
+            return _disease_interpreter
+        except Exception as e:
+            print(f"[WARN] TFLite disease model initialization failed: {e}")
+
+    try:
+        import tensorflow as tf
+        _disease_keras_model = tf.keras.models.load_model(DISEASE_KERAS_PATH)
+        print("[INFO] Loaded Keras disease model.")
+        return _disease_keras_model
+    except Exception as e:
+        print(f"[ERROR] Failed to load disease model: {e}")
+        return None
+
+
+def get_pest_model():
+    """Loads lightweight TFLite model on demand, falling back to Keras if needed."""
+    global _pest_interpreter, _pest_keras_model
+    if _pest_interpreter is not None:
+        return _pest_interpreter
+    if _pest_keras_model is not None:
+        return _pest_keras_model
+
+    if os.path.exists(PEST_TFLITE_PATH):
+        try:
+            from tensorflow.lite.python.interpreter import Interpreter
+            interp = Interpreter(model_path=PEST_TFLITE_PATH)
+            interp.allocate_tensors()
+            _pest_interpreter = interp
+            print("[INFO] Initialized lightweight TFLite pest model.")
+            return _pest_interpreter
+        except Exception as e:
+            print(f"[WARN] TFLite pest model initialization failed: {e}")
+
+    try:
+        import tensorflow as tf
+        _pest_keras_model = tf.keras.models.load_model(PEST_KERAS_PATH)
+        print("[INFO] Loaded Keras pest model.")
+        return _pest_keras_model
+    except Exception as e:
+        print(f"[ERROR] Failed to load pest model: {e}")
+        return None
+
+
+def predict_disease(img_array: np.ndarray) -> np.ndarray:
+    """Runs prediction for crop diseases and returns 1D probability array."""
+    model = get_disease_model()
+    if model is None:
+        raise RuntimeError("Disease vision model could not be initialized.")
+    if hasattr(model, 'get_input_details'):
+        in_idx = model.get_input_details()[0]['index']
+        out_idx = model.get_output_details()[0]['index']
+        model.set_tensor(in_idx, img_array)
+        model.invoke()
+        return model.get_tensor(out_idx)[0]
+    else:
+        return model.predict(img_array, verbose=0)[0]
+
+
+def predict_pest(img_array: np.ndarray) -> np.ndarray:
+    """Runs prediction for crop pests and returns 1D probability array."""
+    model = get_pest_model()
+    if model is None:
+        raise RuntimeError("Pest vision model could not be initialized.")
+    if hasattr(model, 'get_input_details'):
+        in_idx = model.get_input_details()[0]['index']
+        out_idx = model.get_output_details()[0]['index']
+        model.set_tensor(in_idx, img_array)
+        model.invoke()
+        return model.get_tensor(out_idx)[0]
+    else:
+        return model.predict(img_array, verbose=0)[0]
 
 groq_api_key = os.environ.get("GROQ_API_KEY", "")
 groq_client = Groq(api_key=groq_api_key) if groq_api_key else None
@@ -304,9 +397,9 @@ async def analyze_crop(
             elif "rice" in cn or "paddy" in cn: crop_prefix = "rice"
             elif "millet" in cn: crop_prefix = "millet"
 
-        # 1. Computer Vision Predictions via Keras Models (REAL-TIME ACTUAL CONFIDENCE)
-        disease_preds = disease_model.predict(img_array, verbose=0)[0]
-        pest_preds = pest_model.predict(img_array, verbose=0)[0]
+        # 1. Computer Vision Predictions via TFLite / Keras Models (REAL-TIME ACTUAL CONFIDENCE)
+        disease_preds = predict_disease(img_array)
+        pest_preds = predict_pest(img_array)
 
         # Crop-aware selection if crop is known, otherwise take global argmax
         if crop_prefix:
@@ -594,12 +687,12 @@ async def diagnose_and_chat(
         contents = await image.read()
         img_array = process_image_bytes(contents)
 
-        d_preds = disease_model.predict(img_array, verbose=0)
-        p_preds = pest_model.predict(img_array, verbose=0)
+        d_preds = predict_disease(img_array)
+        p_preds = predict_pest(img_array)
 
-        d_idx, p_idx = int(np.argmax(d_preds[0])), int(np.argmax(p_preds[0]))
-        d_class, d_conf = disease_classes[d_idx], float(d_preds[0][d_idx])
-        p_class, p_conf = pest_classes[p_idx], float(p_preds[0][p_idx])
+        d_idx, p_idx = int(np.argmax(d_preds)), int(np.argmax(p_preds))
+        d_class, d_conf = disease_classes[d_idx], float(d_preds[d_idx])
+        p_class, p_conf = pest_classes[p_idx], float(p_preds[p_idx])
 
         loc_ctx = LocationService.create_location(latitude=latitude, longitude=longitude, source="gps")
         weather_ctx = WeatherService.get_weather_for_location(loc_ctx)
