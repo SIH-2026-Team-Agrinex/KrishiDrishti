@@ -6,7 +6,6 @@ import { useNotification } from '../contexts/NotificationContext';
 import { cropAnalysisService } from '../services/api/cropAnalysisService';
 import { AnalysisStage } from '../types/analysis.types';
 import { ImageDropzone } from '../components/crop-analysis/ImageDropzone';
-import { VideoUpload } from '../components/crop-analysis/VideoUpload';
 import { StagedProgressModal } from '../components/crop-analysis/StagedProgressModal';
 import { LocationBanner } from '../components/common/LocationBanner';
 import { localizeCropName } from '../utils/translations';
@@ -26,7 +25,6 @@ export const CropAnalysisPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [images, setImages] = useState<File[]>([]);
-  const [video, setVideo] = useState<File | null>(null);
   const [cropName, setCropName] = useState('');
   const [customCropInput, setCustomCropInput] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
@@ -66,7 +64,6 @@ export const CropAnalysisPage: React.FC = () => {
       const report = await cropAnalysisService.runAnalysis(
         {
           images,
-          video,
           cropName: cropName.trim() || undefined,
           additionalInfo: additionalInfo.trim() || undefined,
           soilMoistureObserved: soilMoisture,
@@ -187,20 +184,10 @@ export const CropAnalysisPage: React.FC = () => {
             <ImageDropzone images={images} onChange={setImages} maxFiles={10} />
           </div>
 
-          {/* 3. Optional Video Input */}
-          <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4">
-            <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs">2</span>
-              <span>{t('analyze_step2_title')}</span>
-            </div>
-
-            <VideoUpload video={video} onChange={setVideo} />
-          </div>
-
-          {/* 4. Choose Any Crop & Environmental Observation */}
+          {/* 2. Choose Any Crop & Environmental Observation */}
           <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
             <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
-              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs">3</span>
+              <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs">2</span>
               <span>{t('analyze_step3_title')}</span>
             </div>
 

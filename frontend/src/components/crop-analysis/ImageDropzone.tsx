@@ -128,38 +128,49 @@ export const ImageDropzone: React.FC<ImageDropzoneProps> = ({ images, onChange, 
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
         />
 
-        <div className="flex flex-col items-center justify-center max-w-md mx-auto">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-agro-600 to-emerald-400 text-white flex items-center justify-center shadow-lg shadow-agro-600/20 mb-4">
-            <UploadCloud className="w-8 h-8" />
+        <div className="flex flex-col items-center justify-center max-w-lg mx-auto py-2">
+          <div className="relative mb-4 group">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-agro-700 via-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-xl shadow-agro-600/30 group-hover:scale-105 transition-transform duration-300">
+              <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md border-2 border-white">
+              <Camera className="w-3.5 h-3.5" />
+            </div>
           </div>
 
-          <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1">
-            {t('drop_drag_title')}
+          <h4 className="text-base sm:text-xl font-extrabold text-slate-900 mb-1.5 font-heading">
+            {t('drop_drag_title') || 'Drag & Drop Leaf Photos Here'}
           </h4>
-          <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-            {t('drop_drag_desc')}
+          <p className="text-xs sm:text-sm text-slate-500 mb-6 max-w-sm leading-relaxed text-center">
+            {t('drop_drag_desc') || 'Take clear, close-up photos of affected leaves, stems, or pests'}
           </p>
 
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          {/* Redesigned Action Buttons: Choose and Click */}
+          <div className="flex flex-wrap items-center justify-center gap-3.5 w-full max-w-sm">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="bg-agro-600 hover:bg-agro-700 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md transition-all flex items-center gap-2"
+              className="flex-1 min-w-[130px] bg-white hover:bg-emerald-50/70 text-slate-800 hover:text-agro-800 font-bold text-xs sm:text-sm px-6 py-3.5 rounded-2xl border-2 border-slate-200 hover:border-agro-400 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2.5 group cursor-pointer"
             >
-              <ImageIcon className="w-4 h-4" />
-              <span>{t('drop_browse_btn')}</span>
+              <ImageIcon className="w-4 h-4 text-agro-600 group-hover:scale-110 transition-transform" />
+              <span>Choose</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsCameraOpen(true)}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-2xl shadow-md transition-all flex items-center gap-2"
+              className="flex-1 min-w-[130px] bg-gradient-to-r from-agro-700 via-agro-600 to-emerald-500 hover:from-agro-800 hover:to-emerald-600 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-2xl shadow-lg shadow-agro-600/30 hover:shadow-agro-600/50 hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Camera className="w-4 h-4" />
-              <span>{t('drop_camera_btn')}</span>
+              <Camera className="w-4 h-4 text-white" />
+              <span>Click</span>
               <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
             </button>
+          </div>
+
+          <div className="mt-4 text-[11px] text-slate-400 flex items-center gap-2">
+            <span>JPEG, PNG, WebP</span>
+            <span>•</span>
+            <span>Up to 10 photos (Max 20MB)</span>
           </div>
         </div>
 

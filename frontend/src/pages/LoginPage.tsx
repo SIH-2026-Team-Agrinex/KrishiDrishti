@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { Sprout, Lock, Mail, ArrowRight, UserCheck } from 'lucide-react';
+import { Sprout, Lock, Mail, ArrowRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login, guestLogin } = useAuth();
+  const { login } = useAuth();
   const { t } = useLanguage();
   const { showToast } = useNotification();
   const navigate = useNavigate();
@@ -35,19 +35,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setIsLoading(true);
-    try {
-      await guestLogin();
-      showToast('Logged in with Demo Farmer Account', undefined, 'success');
-      navigate('/dashboard');
-    } catch (err) {
-      showToast('Guest demo login failed', undefined, 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center p-4 bg-grid-pattern">
       <div className="max-w-md w-full glass-card rounded-3xl p-8 sm:p-10 shadow-2xl border border-agro-200/80 relative">
@@ -63,25 +50,6 @@ export const LoginPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {t('auth_signin_sub')}
           </p>
-        </div>
-
-        {/* 1-Click Demo Login Banner */}
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={isLoading}
-          className="w-full mb-6 p-3 bg-gradient-to-r from-agro-500 to-emerald-600 hover:from-agro-600 hover:to-emerald-700 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group"
-        >
-          <UserCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          <span>{t('auth_demo_login_btn')}</span>
-        </button>
-
-        <div className="relative flex py-2 items-center mb-6">
-          <div className="flex-grow border-t border-slate-200" />
-          <span className="flex-shrink mx-3 text-[11px] font-bold text-slate-400 uppercase">
-            {t('auth_or_creds')}
-          </span>
-          <div className="flex-grow border-t border-slate-200" />
         </div>
 
         {/* Form */}

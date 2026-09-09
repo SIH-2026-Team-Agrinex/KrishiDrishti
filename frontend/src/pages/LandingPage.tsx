@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -17,6 +17,19 @@ import {
 export const LandingPage: React.FC = () => {
   const { t } = useLanguage();
   const { isAuthenticated, guestLogin } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAccessDashboard = async () => {
+    try {
+      if (!isAuthenticated) {
+        await guestLogin();
+      }
+    } catch (err) {
+      console.error('Failed to log in as guest:', err);
+    } finally {
+      navigate('/dashboard');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#fcfdfc] overflow-hidden">
@@ -44,8 +57,8 @@ export const LandingPage: React.FC = () => {
             </span>
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+          {/* Subheading */}
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
             {t('hero_desc')}
           </p>
 
@@ -60,24 +73,21 @@ export const LandingPage: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </Link>
 
-            <Link
-              to={isAuthenticated ? "/dashboard" : "/login"}
-              className="bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base px-8 py-4 rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            <button
+              type="button"
+              onClick={handleAccessDashboard}
+              className="bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base px-8 py-4 rounded-2xl border border-slate-200 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             >
               <CloudSun className="w-5 h-5 text-sky-600" />
               <span>{t('hero_cta_explore')}</span>
-            </Link>
+            </button>
           </div>
 
-          {/* 4 Impact Stat Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          {/* 3 Impact Stat Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
             <div className="glass-card rounded-2xl p-4 text-center">
               <div className="text-2xl sm:text-3xl font-extrabold text-agro-700 font-heading">96.4%</div>
               <div className="text-xs text-slate-500 mt-0.5">{t('stat_accuracy')}</div>
-            </div>
-            <div className="glass-card rounded-2xl p-4 text-center">
-              <div className="text-2xl sm:text-3xl font-extrabold text-agro-700 font-heading">45+</div>
-              <div className="text-xs text-slate-500 mt-0.5">{t('stat_crops')}</div>
             </div>
             <div className="glass-card rounded-2xl p-4 text-center">
               <div className="text-2xl sm:text-3xl font-extrabold text-agro-700 font-heading">10</div>
@@ -265,8 +275,8 @@ export const LandingPage: React.FC = () => {
             </Link>
             <button
               type="button"
-              onClick={guestLogin}
-              className="bg-white/10 hover:bg-white/20 text-white font-semibold text-sm sm:text-base px-6 py-3.5 rounded-2xl border border-white/20 transition-all"
+              onClick={handleAccessDashboard}
+              className="bg-white/10 hover:bg-white/20 text-white font-semibold text-sm sm:text-base px-6 py-3.5 rounded-2xl border border-white/20 transition-all cursor-pointer"
             >
               {t('hero_guest_demo')}
             </button>
