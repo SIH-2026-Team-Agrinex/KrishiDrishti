@@ -278,5 +278,9 @@ Developed with dedication for the **Smart India Hackathon (SIH 2026)** to bring 
 
 ---
 
-## 📄 License
-This project is licensed under the **MIT License** — feel free to use and adapt for agricultural research and farmer empowerment.
+## 📄 Open Source Declaration & Usage
+This project was developed by Team Agrinex for the **Smart India Hackathon 2026**. 
+
+We built **Krishi Drishti** with the core mission of democratizing agricultural technology. As such, the source code is made publicly available to encourage further innovation in the Ag-Tech sector. 
+
+Developers, researchers, and NGOs are welcome to study, adapt, and build upon this prototype for the purposes of agricultural research and farmer empowerment.
