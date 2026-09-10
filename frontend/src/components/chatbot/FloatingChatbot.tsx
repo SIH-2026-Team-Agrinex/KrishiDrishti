@@ -60,7 +60,7 @@ export const FloatingChatbot: React.FC = () => {
     setSessions(allSessions);
   }, []);
 
-  // Load initial messages on language or location change
+  // Load initial messages on language or session switch
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -72,7 +72,7 @@ export const FloatingChatbot: React.FC = () => {
     setMessages(stored);
     setActiveSessionId(localDb.getActiveSessionId());
     refreshSessions();
-  }, [language, user?.cropInterests, location?.city, activeSessionId, isAuthenticated, refreshSessions]);
+  }, [language, activeSessionId, isAuthenticated, refreshSessions]);
 
   // Scroll detection handler
   const handleScroll = () => {
@@ -119,18 +119,14 @@ export const FloatingChatbot: React.FC = () => {
     setTimeout(() => scrollToBottom('smooth'), 50);
 
     try {
-      // Refresh location & real-time weather telemetry before querying model
-      let activeLoc = location;
-      try {
-        activeLoc = await refreshLocation();
-      } catch {}
-
       const botResponse = await chatService.sendMessage(query, {
         cropName: user?.cropInterests?.[0],
-        location: activeLoc,
+        location,
         language,
         sessionId: activeSessionId || undefined,
       });
+
+      console.log('[KrishiDrishti Chat] Bot response received:', botResponse.text.slice(0, 80));
 
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== tempUserMsg.id),
@@ -138,14 +134,10 @@ export const FloatingChatbot: React.FC = () => {
         botResponse,
       ]);
 
-      // IMPORTANT REQUIREMENT:
-      // "Whenevery output generates it should not go auto down , it should be at the position at which user currently is."
-      // If user scrolled up to read earlier text, PRESERVE their scroll position and show the pill badge.
+      // User requested: "chatbot new responses also should not go to bottom in new response"
+      // Maintain user's current reading position and show subtle indicator if there is content below
       if (!isNearBottomRef.current) {
         setHasNewMessageBelow(true);
-      } else {
-        // User was already at bottom -> gently align
-        setTimeout(() => scrollToBottom('smooth'), 80);
       }
 
       refreshSessions();
@@ -294,7 +286,7 @@ export const FloatingChatbot: React.FC = () => {
                     liveStatus.isLive ? (
                       <span
                         className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/25 text-emerald-200 border border-emerald-400/50 shadow-sm"
-                        title={`Live AI: ${liveStatus.provider}`}
+                        title="Live AI Agronomist Online"
                       >
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-80"></span>
@@ -317,7 +309,7 @@ export const FloatingChatbot: React.FC = () => {
                   <span>{isHistoryOpen ? 'Saved Farm Consultations' : t('chat_advisory')}</span>
                   {liveStatus.isLive && !isHistoryOpen && (
                     <span className="text-[10px] text-emerald-300 font-medium">
-                      • {liveStatus.provider}
+                      • 24/7 Active
                     </span>
                   )}
                 </p>

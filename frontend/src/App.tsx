@@ -115,11 +115,13 @@ export const AppContent: React.FC = () => {
 };
 
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ScrollToTop } from './components/common/ScrollToTop';
 
 export default function App() {
   return (
     <ErrorBoundary>
       <Router>
+        <ScrollToTop />
         <LanguageProvider>
           <NotificationProvider>
             <AuthProvider>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocation } from '../contexts/LocationContext';
@@ -7,9 +7,11 @@ import {
   Settings, 
   User as UserIcon, 
   Save, 
-  Plus,
-  X,
-  MapPin
+  Plus, 
+  X, 
+  MapPin, 
+  Mail, 
+  Phone 
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -19,11 +21,23 @@ export const SettingsPage: React.FC = () => {
   const { showToast } = useNotification();
 
   const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [userCity, setUserCity] = useState(user?.farmLocation?.villageOrCity || (location.isCustomLocation ? location.city : ''));
   const [userState, setUserState] = useState(user?.farmLocation?.state || (location.isCustomLocation ? location.state : ''));
   const [selectedCrops, setSelectedCrops] = useState<string[]>(user?.cropInterests || []);
   const [customCropInput, setCustomCropInput] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+      setUserCity(user.farmLocation?.villageOrCity || (location.isCustomLocation ? location.city : ''));
+      setUserState(user.farmLocation?.state || (location.isCustomLocation ? location.state : ''));
+      setSelectedCrops(user.cropInterests || []);
+    }
+  }, [user, location.city, location.state, location.isCustomLocation]);
 
   const handleAddCustomCrop = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -72,13 +86,31 @@ export const SettingsPage: React.FC = () => {
 
         {/* Profile & Preferences Form */}
         <form onSubmit={handleSaveProfile} className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-agro-100">
-            <div className="p-2 bg-agro-100 text-agro-700 rounded-2xl">
+          <div className="flex items-center gap-3 pb-3 border-b border-agro-100">
+            <div className="p-2.5 bg-gradient-to-tr from-agro-700 to-emerald-500 text-white rounded-2xl shadow-sm">
               <UserIcon className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">{t('set_farmer_details')}</h3>
-              <p className="text-xs text-slate-500">{t('set_farmer_sub')}</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-900">{t('set_farmer_details')}</h3>
+                {user?.isGuest ? (
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                    Guest Account
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Verified Farmer
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                <span>{t('set_farmer_sub')}</span>
+                {user?.email && (
+                  <span className="font-semibold text-agro-700 bg-agro-50 px-2 py-0.5 rounded-md border border-agro-200">
+                    ID: {user.email}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
@@ -97,16 +129,38 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Registered Email Address</span>
+                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-semibold">
+                  Registered ID
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 text-slate-700 rounded-2xl border border-slate-200 text-xs sm:text-sm shadow-sm cursor-not-allowed font-medium select-all"
+                  title="Registered Email Address"
+                />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              </div>
+            </div>
+
+            <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 {t('set_phone')}
               </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 9876543210"
-                className="w-full px-4 py-3 bg-white rounded-2xl border border-slate-200 focus:border-agro-500 focus:outline-none text-xs sm:text-sm shadow-sm"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 9876543210"
+                  className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl border border-slate-200 focus:border-agro-500 focus:outline-none text-xs sm:text-sm shadow-sm"
+                />
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              </div>
             </div>
 
             <div>

@@ -19,14 +19,15 @@ const LANGUAGE_NAME_MAP: Record<LanguageCode, string> = {
   bn: 'Bengali (বাংলা script)',
 };
 
-// Helper to query Groq API (High-speed LLaMA 3.3 70B & 8B)
+// Helper to query Groq API (High-speed LLaMA 3.3, Qwen 3.8, GPT-OSS)
 async function queryGroq(key: string, systemPrompt: string, userText: string): Promise<string | null> {
   const preferredModels = [
     'qwen/qwen3.8-27b',
-    'qwen/qwen3.6-27b',
     'openai/gpt-oss-20b',
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
+    'groq/compound-mini',
+    'allam-2-7b',
   ];
 
   for (const model of preferredModels) {
@@ -44,18 +45,24 @@ async function queryGroq(key: string, systemPrompt: string, userText: string): P
             { role: 'user', content: userText },
           ],
           temperature: 0.25,
-          max_tokens: 650,
+          max_tokens: 1024,
         }),
-        signal: AbortSignal.timeout(9000),
+        signal: AbortSignal.timeout(12000),
       });
 
       if (res.ok) {
         const data = await res.json();
         let content = data?.choices?.[0]?.message?.content;
         if (content) {
-          content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-          return content;
+          content = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
+          if (content) {
+            console.log(`[KrishiDrishti AI] Groq (${model}) responded successfully`);
+            return content;
+          }
         }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn(`[KrishiDrishti AI] Groq (${model}) returned HTTP ${res.status}:`, errJson);
       }
     } catch (e) {
       console.warn(`[KrishiDrishti AI] Groq (${model}) request warning:`, e);
@@ -384,17 +391,13 @@ export const chatService = {
     let provider = 'Standby';
     let hasKey = false;
 
-    if (groq || (gemini && gemini.startsWith('gsk_')) || (grok && grok.startsWith('gsk_'))) {
-      provider = 'Groq Cloud (LLaMA 3.3)';
-      hasKey = true;
-    } else if (grok || (gemini && gemini.startsWith('xai-'))) {
-      provider = 'xAI Grok 2';
-      hasKey = true;
-    } else if (gemini && (gemini.startsWith('AIza') || (!gemini.startsWith('sk-') && !gemini.startsWith('gsk_')))) {
-      provider = 'Google Gemini';
-      hasKey = true;
-    } else if (openai || (gemini && gemini.startsWith('sk-'))) {
-      provider = 'OpenAI';
+    if (
+      groq ||
+      gemini ||
+      grok ||
+      openai
+    ) {
+      provider = 'AI Agronomist Online';
       hasKey = true;
     }
 
@@ -594,15 +597,27 @@ export const chatService = {
       })) : []
     };
 
+// Helper to remove redundant greetings on conversation responses
+function stripRepetitiveGreetings(text: string): string {
+  if (!text) return text;
+  let cleaned = text.trim();
+  // Strip common repetitive greeting prefixes
+  cleaned = cleaned
+    .replace(/^(?:(?:Namaste|Hello|Hi|Greetings|Ram\s*Ram|Sat\s*Sri\s*Akal|Vanakkam|Kisan\s*Bhai|Farmer\s*Friend)[!,\.\s\-–—\n]*)+/i, '')
+    .replace(/^(?:नमस्ते(?:\s+किसान(?:\s+भाई|\s+मित्र)?)?|राम\s*राम(?:\s+भाई|\s+किसान)?|सत\s*श्री\s*ਅਕਾਲ|नमस्कार|வணக்கம்)[!,\.\s\-–—\n]*/i, '')
+    .trim();
+  return cleaned || text;
+}
+
     // System prompt with strict language requirement, conciseness, and rich formatting
     const systemPrompt = `You are KrishiDrishti AI, a high-precision smart AI Agronomist assistant for Indian farmers.
 
 CRITICAL LANGUAGE REQUIREMENT (STRICT):
 The farmer's selected language is: "${langFullName}" (code: "${lang}").
 You MUST output your ENTIRE response strictly and fluently in ${langFullName}.
-- For 'hi': Use pure, high-quality Hindi in Devanagari script (e.g., नमस्ते किसान भाई, वर्तमान मौसम...).
-- For 'hinglish': Use fluent Romanized Hindi mixed with easy English (e.g., "Kisan bhai, live mausam ke mutabik...").
-- For 'haryanvi': Use natural colloquial Haryanvi (e.g., "राम राम भाई, आज खेत में...").
+- For 'hi': Use pure, high-quality Hindi in Devanagari script.
+- For 'hinglish': Use fluent Romanized Hindi mixed with easy English.
+- For 'haryanvi': Use natural colloquial Haryanvi.
 - For 'pa': Use Punjabi in Gurmukhi script.
 - For 'mr': Use Marathi in Devanagari script.
 - For 'te': Use Telugu in Telugu script.
@@ -618,7 +633,8 @@ OUTPUT CONSTRAINTS:
 2. Structure: Use bullet points (•) and relevant agricultural emojis (🌾, 🧪, 💧, ⚠️, 🛡️, 📅, ☀️, 🚜, 📍).
 3. Realism: Reference the farmer's live location (${userDbProfile.farmLocation}) and live weather (${userDbProfile.liveWeather}).
 4. Actionable: Give clear dosage/recommendations (e.g. spray timing, chemical/bio ingredient, precautions).
-5. Database grounding: ${userDbProfile.diagnosedReportsCount > 0 ? `Farmer has ${userDbProfile.diagnosedReportsCount} diagnosis records in DB.` : '0 previous leaf disease scans in DB.'}`;
+5. Database grounding: ${userDbProfile.diagnosedReportsCount > 0 ? `Farmer has ${userDbProfile.diagnosedReportsCount} diagnosis records in DB.` : '0 previous leaf disease scans in DB.'}
+6. STRICT NO-GREETING RULE: The chatbot has ALREADY greeted the farmer when the chat session started. Under NO circumstances should you start your response with "Namaste", "Hello", "Greetings", "Ram Ram", or any greeting phrase. Jump directly into the answer or solution immediately without repeating greetings.`;
 
     // 4. Attempt online query (FastAPI Backend / Groq / Gemini / Grok / OpenAI)
     let onlineReply: string | null = null;
@@ -697,10 +713,11 @@ OUTPUT CONSTRAINTS:
 
     // 5. If online reply obtained:
     if (onlineReply) {
+      const cleanReply = stripRepetitiveGreetings(onlineReply);
       const botMsg: ChatMessage = {
         id: `msg_bot_${Date.now()}`,
         sender: 'assistant',
-        text: onlineReply,
+        text: cleanReply,
         timestamp: new Date().toISOString(),
         suggestions: dynamicSuggestions,
         visualCard,

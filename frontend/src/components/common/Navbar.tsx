@@ -153,9 +153,19 @@ export const Navbar: React.FC = () => {
                 </Link>
                 <div className="h-6 w-px bg-slate-200 mx-1" />
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-agro-100 text-agro-800 flex items-center justify-center font-bold text-xs border border-agro-300">
-                    {user?.name ? user.name[0].toUpperCase() : 'U'}
-                  </div>
+                  <Link
+                    to="/settings"
+                    className="flex items-center gap-2 py-1 px-2.5 rounded-xl hover:bg-slate-100 transition-colors group"
+                    title={user?.email ? `Registered email: ${user.email}` : undefined}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-agro-100 text-agro-800 flex items-center justify-center font-bold text-xs border border-agro-300 group-hover:border-agro-500">
+                      {user?.name ? user.name[0].toUpperCase() : 'U'}
+                    </div>
+                    <div className="hidden lg:block text-left">
+                      <div className="text-xs font-bold text-slate-800 leading-tight max-w-[130px] truncate">{user?.name || 'Farmer'}</div>
+                      <div className="text-[10px] text-slate-500 leading-tight max-w-[140px] truncate">{user?.email}</div>
+                    </div>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => {

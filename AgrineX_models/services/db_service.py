@@ -122,7 +122,18 @@ class DatabaseService:
             if not identifier:
                 raise ValueError("Identifier (email or mobile number) is required")
 
-            existing = session.query(UserModel).filter(UserModel.identifier == identifier).first()
+            email_val = str(user_data.get("email") or "").strip().lower()
+            if not email_val:
+                email_val = identifier if "@" in identifier else f"{identifier}@krishidrishti.in"
+
+            phone_val = str(user_data.get("phone") or "").strip()
+            if not phone_val and not ("@" in identifier):
+                phone_val = identifier
+
+            existing = session.query(UserModel).filter(
+                (UserModel.identifier == identifier) |
+                (UserModel.email == email_val)
+            ).first()
             if existing:
                 raise ValueError("An account with this email or mobile number already exists.")
 
@@ -139,15 +150,12 @@ class DatabaseService:
             crops = user_data.get("cropInterests", [])
             crops_str = json.dumps(crops)
 
-            email_val = identifier if "@" in identifier else f"{identifier}@krishidrishti.in"
-            phone_val = identifier if not ("@" in identifier) else user_data.get("phone")
-
             user = UserModel(
                 id=user_id,
                 identifier=identifier,
                 name=user_data.get("name", "Farmer User"),
                 email=email_val,
-                phone=phone_val,
+                phone=phone_val if phone_val else None,
                 password_hash=pwd_hash,
                 preferred_language=user_data.get("preferredLanguage", "en"),
                 farm_location=farm_loc_str,
@@ -157,6 +165,7 @@ class DatabaseService:
             session.commit()
             session.refresh(user)
 
+            print(f"[DB SUCCESS] Created user in database: {user.name} ({user.email}) ID: {user.id}")
             return self._user_to_dict(user)
         except Exception as e:
             session.rollback()

@@ -47,11 +47,20 @@ export const authService = {
   },
 
   async signup(data: SignupData): Promise<{ user: User; token: string }> {
+    const emailVal = data.email || (data.identifier.includes('@') ? data.identifier.trim().toLowerCase() : undefined);
+    const phoneVal = data.phone || (!data.identifier.includes('@') ? data.identifier.trim() : undefined);
+
+    const payload = {
+      ...data,
+      email: emailVal,
+      phone: phoneVal,
+    };
+
     if (!ENV_CONFIG.USE_LOCAL_DB) {
       try {
         const response = await apiClient<{ user: User; token: string }>(`${ENV_CONFIG.AUTH_API_URL}/signup`, {
           method: 'POST',
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
         localDb.setAuthUser(response.user, response.token);
         return response;
@@ -68,8 +77,8 @@ export const authService = {
     const user: User = {
       id: `usr_${Date.now()}`,
       name: data.name,
-      email: data.identifier.includes('@') ? data.identifier : `${data.identifier}@krishidrishti.in`,
-      phone: !data.identifier.includes('@') ? data.identifier : undefined,
+      email: emailVal || `${data.identifier}@krishidrishti.in`,
+      phone: phoneVal,
       preferredLanguage: data.preferredLanguage || 'en',
       farmLocation: dynamicLoc,
       cropInterests: data.cropInterests || [],

@@ -31,6 +31,8 @@ export interface LoginCredentials {
 export interface SignupData {
   name: string;
   identifier: string;
+  email?: string;
+  phone?: string;
   password?: string;
   preferredLanguage?: string;
   farmLocation?: string;

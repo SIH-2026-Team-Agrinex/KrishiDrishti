@@ -383,6 +383,8 @@ async def health_check():
 class SignupRequest(BaseModel):
     name: str
     identifier: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
     password: Optional[str] = "password123"
     preferredLanguage: Optional[str] = "en"
     farmLocation: Optional[Any] = None
@@ -412,6 +414,8 @@ async def auth_signup(req: SignupRequest):
         user_dict = db_service.create_user({
             "name": req.name,
             "identifier": req.identifier,
+            "email": req.email,
+            "phone": req.phone,
             "password": req.password or "password123",
             "preferredLanguage": req.preferredLanguage or "en",
             "farmLocation": req.farmLocation or "My Farm Field",
@@ -1169,6 +1173,54 @@ async def weather_advisory(payload: Optional[WeatherAdvisoryRequest] = None):
             "Use recommended adjuvant/sticker if spraying is required under humid conditions."
         ]
     }
+
+class ChatQueryRequest(BaseModel):
+    message: str
+    userDbProfile: Optional[Dict[str, Any]] = None
+    systemPrompt: Optional[str] = None
+    language: Optional[str] = "en"
+
+
+@app.post("/api/chat")
+async def handle_chat_message(req: ChatQueryRequest):
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    if not groq_key:
+        raise HTTPException(status_code=503, detail="Groq API key not configured")
+
+    client = Groq(api_key=groq_key)
+    models_to_try = [
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-20b",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "groq/compound-mini",
+        "allam-2-7b",
+    ]
+
+    sys_prompt = req.systemPrompt or "You are KrishiDrishti AI, a high-precision smart AI Agronomist assistant for Indian farmers."
+
+    for m in models_to_try:
+        try:
+            completion = client.chat.completions.create(
+                model=m,
+                messages=[
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": req.message}
+                ],
+                temperature=0.25,
+                max_tokens=1024
+            )
+            if completion and completion.choices:
+                raw_text = completion.choices[0].message.content or ""
+                import re
+                cleaned = re.sub(r"<think>[\s\S]*?(?:</think>|$)", "", raw_text, flags=re.IGNORECASE).strip()
+                if cleaned:
+                    return {"reply": cleaned, "model": m, "status": "success"}
+        except Exception as err:
+            print(f"[Chat API] Model {m} error: {err}")
+            continue
+
+    raise HTTPException(status_code=502, detail="No response from Groq models")
 
 
 if __name__ == "__main__":

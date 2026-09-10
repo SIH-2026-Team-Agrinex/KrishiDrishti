@@ -3,6 +3,7 @@ import { CropAnalysisReport } from '../../types/analysis.types';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Send, Bot, User, Sparkles, RefreshCw, HelpCircle, Globe } from 'lucide-react';
 import { chatService } from '../../services/api/chatService';
+import { FormattedChatText } from '../chatbot/FormattedChatText';
 
 interface ReportAgronomistChatProps {
   report: CropAnalysisReport;
@@ -20,15 +21,27 @@ export const ReportAgronomistChat: React.FC<ReportAgronomistChatProps> = ({ repo
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(true);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const latestMsgRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Scroll to the TOP of the new message (so response starts cleanly at the top, not bottom)
+  const scrollToMessageTop = (el: HTMLElement | null) => {
+    if (!chatContainerRef.current || !el) return;
+    const container = chatContainerRef.current;
+    const targetTop = el.offsetTop - container.offsetTop;
+    container.scrollTo({
+      top: Math.max(0, targetTop - 8),
+      behavior: 'smooth',
+    });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading, analyzing]);
+    if (messages.length > 1) {
+      setTimeout(() => {
+        scrollToMessageTop(latestMsgRef.current);
+      }, 50);
+    }
+  }, [messages.length]);
 
   // On mount or when report changes, first send all test data to our model for thorough analysis
   useEffect(() => {
@@ -111,40 +124,6 @@ export const ReportAgronomistChat: React.FC<ReportAgronomistChatProps> = ({ repo
     sendQuery(input);
   };
 
-  // Helper to format assistant text with markdown bold and bullet points
-  const renderFormattedText = (text: string) => {
-    const lines = text.split('\n');
-    return lines.map((line, idx) => {
-      // Split by bold (**text**)
-      const parts = line.split(/(\*\*.*?\*\*)/g);
-      const formattedParts = parts.map((part, pIdx) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={pIdx} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
-        }
-        return part;
-      });
-
-      if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
-        return (
-          <div key={idx} className="flex items-start gap-1.5 my-1 pl-1 text-slate-700">
-            <span className="text-agro-600 font-bold">•</span>
-            <div className="flex-1">{formattedParts}</div>
-          </div>
-        );
-      }
-
-      if (line.trim() === '') {
-        return <div key={idx} className="h-1.5" />;
-      }
-
-      return (
-        <p key={idx} className="my-0.5 text-slate-800">
-          {formattedParts}
-        </p>
-      );
-    });
-  };
-
   return (
     <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200/80 space-y-4">
       {/* Header */}
@@ -173,7 +152,7 @@ export const ReportAgronomistChat: React.FC<ReportAgronomistChatProps> = ({ repo
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="space-y-3.5 max-h-80 overflow-y-auto pr-1">
+      <div ref={chatContainerRef} className="space-y-3.5 max-h-80 overflow-y-auto pr-1">
         {analyzing ? (
           <div className="p-4 rounded-2xl bg-agro-50/70 border border-agro-200/70 text-agro-900 space-y-2 animate-pulse">
             <div className="flex items-center gap-2 text-xs font-semibold text-agro-800">
@@ -185,29 +164,40 @@ export const ReportAgronomistChat: React.FC<ReportAgronomistChatProps> = ({ repo
             </p>
           </div>
         ) : (
-          messages.map((m, i) => (
-            <div key={i} className={`flex items-start gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {m.role === 'assistant' && (
-                <div className="w-7 h-7 rounded-lg bg-agro-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                  <Bot className="w-4 h-4" />
-                </div>
-              )}
+          messages.map((m, i) => {
+            const isLatest = i === messages.length - 1;
+            return (
               <div
-                className={`p-3.5 rounded-2xl text-xs max-w-[88%] leading-relaxed shadow-2xs ${
-                  m.role === 'user'
-                    ? 'bg-agro-600 text-white rounded-tr-xs'
-                    : 'bg-slate-50/90 text-slate-800 rounded-tl-xs border border-slate-200/80'
-                }`}
+                key={i}
+                ref={isLatest ? latestMsgRef : null}
+                className={`flex items-start gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {m.role === 'assistant' ? renderFormattedText(m.text) : m.text}
-              </div>
-              {m.role === 'user' && (
-                <div className="w-7 h-7 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                  <User className="w-4 h-4" />
+                {m.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-lg bg-agro-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                )}
+                <div
+                  className={`p-3.5 rounded-2xl text-xs max-w-[88%] leading-relaxed shadow-2xs ${
+                    m.role === 'user'
+                      ? 'bg-agro-600 text-white rounded-tr-xs'
+                      : 'bg-slate-50/90 text-slate-800 rounded-tl-xs border border-slate-200/80'
+                  }`}
+                >
+                  {m.role === 'assistant' ? (
+                    <FormattedChatText text={m.text} isAssistant={true} />
+                  ) : (
+                    m.text
+                  )}
                 </div>
-              )}
-            </div>
-          ))
+                {m.role === 'user' && (
+                  <div className="w-7 h-7 rounded-lg bg-slate-700 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
 
         {loading && (
@@ -216,7 +206,6 @@ export const ReportAgronomistChat: React.FC<ReportAgronomistChatProps> = ({ repo
             <span>Consulting agricultural database & commercial formulations...</span>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Suggested Follow-up Question Chips */}
