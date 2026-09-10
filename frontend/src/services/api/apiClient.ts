@@ -64,7 +64,11 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(errorBody.message || `HTTP Error ${response.status}: ${response.statusText}`);
+    const errorMsg = errorBody.detail || errorBody.message || `HTTP Error ${response.status}: ${response.statusText}`;
+    const err: any = new Error(errorMsg);
+    err.status = response.status;
+    err.body = errorBody;
+    throw err;
   }
 
   return response.json();

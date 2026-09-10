@@ -380,6 +380,97 @@ async def health_check():
     }
 
 
+class SignupRequest(BaseModel):
+    name: str
+    identifier: str
+    password: Optional[str] = "password123"
+    preferredLanguage: Optional[str] = "en"
+    farmLocation: Optional[Any] = None
+    cropInterests: Optional[List[str]] = []
+
+
+class LoginRequest(BaseModel):
+    identifier: str
+    password: Optional[str] = ""
+    rememberMe: Optional[bool] = True
+
+
+class UpdateUserRequest(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    preferredLanguage: Optional[str] = None
+    cropInterests: Optional[List[str]] = None
+    farmLocation: Optional[Any] = None
+
+
+@app.post("/api/auth/signup")
+@app.post("/auth/signup")
+async def auth_signup(req: SignupRequest):
+    try:
+        user_dict = db_service.create_user({
+            "name": req.name,
+            "identifier": req.identifier,
+            "password": req.password or "password123",
+            "preferredLanguage": req.preferredLanguage or "en",
+            "farmLocation": req.farmLocation or "My Farm Field",
+            "cropInterests": req.cropInterests or [],
+        })
+        token = f"jwt_db_{user_dict['id']}_{int(datetime.now(timezone.utc).timestamp())}"
+        return {"user": user_dict, "token": token}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        print(f"[AUTH ERROR in signup]: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/auth/login")
+@app.post("/auth/login")
+async def auth_login(req: LoginRequest):
+    try:
+        user = db_service.authenticate_user(req.identifier, req.password or "")
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials. Please verify your mobile number/email and password, or create an account.")
+
+        token = f"jwt_db_{user['id']}_{int(datetime.now(timezone.utc).timestamp())}"
+        return {"user": user, "token": token}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[AUTH ERROR in login]: {e}")
+        raise HTTPException(status_code=500, detail="Authentication failed. Please try again.")
+
+
+@app.post("/api/auth/update")
+@app.put("/api/auth/user/{user_id}")
+async def auth_update_user(req: UpdateUserRequest, user_id: Optional[str] = None):
+    try:
+        target_id = user_id or req.id
+        if not target_id:
+            raise HTTPException(status_code=400, detail="User ID is required for profile update")
+
+        updates = {k: v for k, v in req.model_dump().items() if v is not None}
+        updated = db_service.update_user_profile(target_id, updates)
+        if not updated:
+            raise HTTPException(status_code=404, detail="User not found in database")
+        return {"user": updated, "status": "success"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[AUTH ERROR in update]: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/auth/user/{user_id}")
+async def auth_get_user(user_id: str):
+    user = db_service.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found in database")
+    return {"user": user}
+
+
 @app.post("/api/crop-analysis")
 @app.post("/crop-analysis")
 async def analyze_crop(
@@ -391,7 +482,11 @@ async def analyze_crop(
     longitude: float = Form(79.0882),
     language: str = Form("en"),
     soil_moisture_observed: Optional[str] = Form(None),
-    cross_question_answers: Optional[str] = Form(None)
+    cross_question_answers: Optional[str] = Form(None),
+    farmer_id: Optional[str] = Form(None),
+    farmer_name: Optional[str] = Form(None),
+    is_guest: bool = Form(False),
+    location_name: Optional[str] = Form(None)
 ):
     """
     Main endpoint executed when user clicks Execute in the frontend.
@@ -504,7 +599,13 @@ async def analyze_crop(
         loc_ctx = LocationService.create_location(latitude=latitude, longitude=longitude, source="gps")
         weather_ctx = WeatherService.get_weather_for_location(loc_ctx)
         soil_ctx = SoilService.get_soil_for_location(loc_ctx)
-        loc_name = get_location_name(latitude, longitude)
+        
+        # Real-time test location detection:
+        clean_loc = (location_name or "").strip()
+        if clean_loc and clean_loc.lower() not in ["farm field", "agricultural field", "real-time field", "current field", ""]:
+            loc_name = clean_loc
+        else:
+            loc_name = get_location_name(latitude, longitude)
 
         # 4. Multi-Modal Risk Evaluation
         d_detection = VisionDetection(class_name=raw_disease_class, confidence=d_conf, threshold_passed=not is_healthy and not is_inconclusive)
@@ -642,9 +743,9 @@ async def analyze_crop(
             "status": "COMPLETED"
         }
 
-        # Cache report in memory store & persist to database
+        # Cache report in memory store & persist to database (only if not guest)
         REPORTS_STORE.insert(0, report)
-        db_service.save_report(report)
+        db_service.save_report(report, farmer_id=farmer_id, farmer_name=farmer_name, is_guest=is_guest)
         return report
 
     except Exception as e:
@@ -654,9 +755,14 @@ async def analyze_crop(
 
 @app.get("/api/history")
 @app.get("/history")
-async def get_history(crop: Optional[str] = "ALL", risk: Optional[str] = "ALL", q: Optional[str] = None):
+async def get_history(
+    crop: Optional[str] = "ALL",
+    risk: Optional[str] = "ALL",
+    q: Optional[str] = None,
+    farmer_id: Optional[str] = None
+):
     # 1. Try querying connected database (PostgreSQL / SQLite)
-    db_results = db_service.get_history(crop=crop, risk=risk, q=q)
+    db_results = db_service.get_history(crop=crop, risk=risk, q=q, farmer_id=farmer_id)
     if db_results:
         return db_results
 

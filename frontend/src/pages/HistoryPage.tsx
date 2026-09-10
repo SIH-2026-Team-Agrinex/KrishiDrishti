@@ -12,8 +12,8 @@ import {
   Trash2, 
   ExternalLink, 
   Calendar, 
-  RefreshCcw, 
-  Microscope
+  Microscope,
+  AlertCircle
 } from 'lucide-react';
 
 export const HistoryPage: React.FC = () => {
@@ -24,6 +24,8 @@ export const HistoryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCrop, setSelectedCrop] = useState('ALL');
   const [selectedRisk, setSelectedRisk] = useState('ALL');
+  const [reportToDelete, setReportToDelete] = useState<{ id: string; crop: string; condition: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadReports = async () => {
     setLoading(true);
@@ -50,23 +52,22 @@ export const HistoryPage: React.FC = () => {
     loadReports();
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (window.confirm('Delete this analysis report from local history?')) {
-      await historyService.deleteReport(id);
-      showToast('Report deleted from history', undefined, 'info');
-      loadReports();
+  const handleConfirmDelete = async () => {
+    if (!reportToDelete) return;
+    try {
+      setIsDeleting(true);
+      await historyService.deleteReport(reportToDelete.id);
+      showToast('Diagnostic report permanently deleted from database', undefined, 'success');
+      setReportToDelete(null);
+      await loadReports();
+    } catch (err) {
+      console.error('Failed to delete report:', err);
+      showToast('Failed to delete report from database', undefined, 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleResetSeed = async () => {
-    if (window.confirm('Reset history to initial sample agricultural cases?')) {
-      await historyService.resetSeedData();
-      showToast('Sample dataset restored', undefined, 'success');
-      loadReports();
-    }
-  };
 
   const availableCrops = ['ALL', 'Tomato', 'Wheat', 'Rice / Paddy', 'Cotton', 'Potato'];
   const riskLevels = ['ALL', 'LOW', 'MODERATE', 'HIGH', 'CRITICAL'];
@@ -91,14 +92,6 @@ export const HistoryPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleResetSeed}
-              className="px-3.5 py-2 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 shadow-sm transition-all flex items-center gap-1.5"
-            >
-              <RefreshCcw className="w-3.5 h-3.5 text-agro-600" />
-              <span>{t('hist_restore_btn')}</span>
-            </button>
             <Link
               to="/crop-analysis"
               className="px-4 py-2 bg-agro-600 hover:bg-agro-700 text-white text-xs font-bold rounded-2xl shadow-md transition-all flex items-center gap-1.5"
@@ -179,12 +172,14 @@ export const HistoryPage: React.FC = () => {
               const rep = localizeReportData(rawRep, language);
               const isCritical = rep.aiAdvisory.overallRiskLevel === 'CRITICAL';
               return (
-                <Link
+                <div
                   key={rep.id}
-                  to={`/analysis/${rep.id}`}
                   className="glass-card rounded-3xl p-6 flex flex-col justify-between space-y-4 hover:border-agro-300 hover:shadow-glass-hover transition-all group"
                 >
-                  <div className="space-y-3">
+                  <Link
+                    to={`/analysis/${rep.id}`}
+                    className="space-y-3 block focus:outline-none"
+                  >
                     {/* Card Top Meta */}
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <div className="flex items-center gap-1.5">
@@ -241,7 +236,7 @@ export const HistoryPage: React.FC = () => {
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {rep.aiAdvisory.executiveSummary}
                     </p>
-                  </div>
+                  </Link>
 
                   {/* Footer */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
@@ -251,22 +246,76 @@ export const HistoryPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={(e) => handleDelete(rep.id, e)}
+                        onClick={() => setReportToDelete({
+                          id: rep.id,
+                          crop: rep.mlModelDetection.cropIdentified,
+                          condition: rep.mlModelDetection.diseaseOrCondition,
+                        })}
                         className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                        title="Delete record"
+                        title="Delete test report from database"
+                        aria-label="Delete test report"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                      <span className="text-agro-700 font-bold flex items-center gap-1">
+                      <Link
+                        to={`/analysis/${rep.id}`}
+                        className="text-agro-700 font-bold flex items-center gap-1 hover:underline"
+                      >
                         {t('hist_view_dossier')}
                         <ExternalLink className="w-3.5 h-3.5" />
-                      </span>
+                      </Link>
                     </div>
                   </div>
 
-                </Link>
+                </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {reportToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+            <div 
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center space-y-5 animate-scaleUp"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+                <Trash2 className="w-7 h-7" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900">
+                  Delete Diagnostic Report?
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Are you sure you want to permanently delete the test report for{' '}
+                  <strong className="text-slate-900 font-semibold">{reportToDelete.crop} ({reportToDelete.condition})</strong>{' '}
+                  from the database? This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setReportToDelete(null)}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-2xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDelete}
+                  className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Report'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

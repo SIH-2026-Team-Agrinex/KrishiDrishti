@@ -9,8 +9,25 @@ export const QuickStats: React.FC<{ reports: CropAnalysisReport[] }> = ({ report
   const navigate = useNavigate();
 
   const total = reports.length;
-  const criticalCount = reports.filter((r) => r.aiAdvisory.overallRiskLevel === 'CRITICAL').length;
-  const healthScore = total > 0 ? Math.round(((total - criticalCount) / total) * 100) : 94;
+  const criticalCount = reports.filter((r) => r.aiAdvisory?.overallRiskLevel === 'CRITICAL').length;
+  
+  // Farm Health Index: 100% on new farmer registration (0 tests), dynamic according to diagnostic reports
+  let healthScore = 100;
+  if (total > 0) {
+    const scoreSum = reports.reduce((acc, r) => {
+      const risk = r.aiAdvisory?.overallRiskLevel?.toUpperCase();
+      const isHealthy = r.mlModelDetection?.diseaseOrCondition?.toLowerCase().includes('healthy');
+      if (isHealthy || risk === 'LOW') return acc + 100;
+      if (risk === 'MODERATE') return acc + 75;
+      if (risk === 'HIGH') return acc + 40;
+      if (risk === 'CRITICAL') return acc + 15;
+      return acc + 60;
+    }, 0);
+    healthScore = Math.max(10, Math.min(100, Math.round(scoreSum / total)));
+  }
+
+  const isOptimal = healthScore >= 80;
+  const isModerate = healthScore >= 50 && healthScore < 80;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -27,12 +44,28 @@ export const QuickStats: React.FC<{ reports: CropAnalysisReport[] }> = ({ report
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-heading">
             {healthScore}%
           </div>
-          <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-1">
+          <div className={`text-[11px] font-semibold flex items-center gap-1 mt-1 ${
+            isOptimal ? 'text-emerald-600' : isModerate ? 'text-amber-600' : 'text-rose-600'
+          }`}>
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>{t('dash_optimal_vigour')}</span>
+            <span>
+              {total === 0 
+                ? 'Fresh Field • 100% Pristine' 
+                : isOptimal 
+                ? t('dash_optimal_vigour') 
+                : isModerate 
+                ? 'Moderate Stress Observed' 
+                : 'Action Required'}
+            </span>
           </div>
         </div>
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-agro-600 to-emerald-400 text-white flex items-center justify-center font-extrabold text-lg shadow-md shadow-agro-600/20 group-hover:scale-105 transition-transform">
+        <div className={`w-14 h-14 rounded-2xl text-white flex items-center justify-center font-extrabold text-lg shadow-md group-hover:scale-105 transition-transform ${
+          isOptimal
+            ? 'bg-gradient-to-tr from-agro-600 to-emerald-400 shadow-agro-600/20'
+            : isModerate
+            ? 'bg-gradient-to-tr from-amber-500 to-amber-400 shadow-amber-500/20'
+            : 'bg-gradient-to-tr from-rose-600 to-rose-400 shadow-rose-600/20'
+        }`}>
           <ShieldCheck className="w-7 h-7" />
         </div>
       </div>

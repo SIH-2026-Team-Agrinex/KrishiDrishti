@@ -37,10 +37,26 @@ and instant connection pooling at zero cost.
    - Copy the URI string. It follows this format:
      postgresql://<db_user>:<db_password>@<db_host>/<db_name>?sslmode=require
 
-4. Create the `crop_reports` table:
+4. Create the `users` and `crop_reports` tables:
    - In the database console, open the **"SQL Editor"**.
    - Paste this SQL query and click **"Run"**:
 
+   -- Farmers Authentication & Profile Table
+   CREATE TABLE IF NOT EXISTS users (
+       id VARCHAR(64) PRIMARY KEY,
+       identifier VARCHAR(150) UNIQUE NOT NULL,
+       name VARCHAR(150) NOT NULL,
+       email VARCHAR(150),
+       phone VARCHAR(50),
+       password_hash VARCHAR(255) NOT NULL,
+       preferred_language VARCHAR(20) DEFAULT 'en',
+       farm_location TEXT,
+       crop_interests TEXT,
+       created_at TIMESTAMPTZ DEFAULT NOW(),
+       updated_at TIMESTAMPTZ DEFAULT NOW()
+   );
+
+   -- Foliar Pathology & Pest Diagnostic Reports Table
    CREATE TABLE IF NOT EXISTS crop_reports (
        id VARCHAR(64) PRIMARY KEY,
        created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -52,12 +68,14 @@ and instant connection pooling at zero cost.
        location_name VARCHAR(150),
        latitude FLOAT,
        longitude FLOAT,
+       farmer_id VARCHAR(64),
+       farmer_name VARCHAR(150),
        raw_json TEXT NOT NULL
    );
 
 5. Local Environment (Optional):
-   You can add this connection string to your local `AgrineX_models/.env`:
-   DATABASE_URL="<your_database_connection_uri>"
+   Add your Neon connection URI to `AgrineX_models/.env`:
+   DATABASE_URL="postgresql://<user>:<password>@<neon_host>/<dbname>?sslmode=require"
 
 ================================================================================
 2. STEP 2: REPOSITORY ON GITHUB

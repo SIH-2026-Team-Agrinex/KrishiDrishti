@@ -61,10 +61,94 @@ class LocalDatabase {
     }
   }
 
-  // Reports CRUD
+  // Device ID Management for Device-Specific Guest Profiles
+  public getDeviceId(): string {
+    let devId = localStorage.getItem('krishidrishti_device_id_v1');
+    if (!devId) {
+      const rand = Math.random().toString(36).substring(2, 10);
+      const time = Date.now().toString(36);
+      devId = `dev-${rand}-${time}`;
+      try {
+        localStorage.setItem('krishidrishti_device_id_v1', devId);
+      } catch (e) {
+        console.error('Error saving device ID:', e);
+      }
+    }
+    return devId;
+  }
+
+  // Device-Specific Local Guest Profile
+  public getOrCreateGuestProfile(): User {
+    const deviceId = this.getDeviceId();
+    const guestKey = `krishidrishti_guest_profile_${deviceId}`;
+    try {
+      const stored = localStorage.getItem(guestKey);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+
+    const shortId = deviceId.slice(-4).toUpperCase();
+    const location = this.getLocation() || {
+      city: 'Local Farm Field',
+      state: 'India',
+      latitude: 20.5937,
+      longitude: 78.9629,
+    };
+
+    const newGuest: User = {
+      id: `guest-${deviceId}`,
+      name: `Guest Farmer (${shortId})`,
+      email: `guest-${shortId.toLowerCase()}@device.local`,
+      phone: undefined,
+      preferredLanguage: 'en',
+      farmLocation: {
+        villageOrCity: location.city || 'Local Farm Field',
+        state: location.state || 'India',
+        lat: location.latitude,
+        lon: location.longitude,
+      },
+      cropInterests: [],
+      createdAt: new Date().toISOString(),
+      isGuest: true,
+    };
+
+    try {
+      localStorage.setItem(guestKey, JSON.stringify(newGuest));
+    } catch {}
+
+    return newGuest;
+  }
+
+  public updateGuestProfile(updates: Partial<User>): User {
+    const current = this.getOrCreateGuestProfile();
+    const updated = { ...current, ...updates, isGuest: true };
+    const deviceId = this.getDeviceId();
+    try {
+      localStorage.setItem(`krishidrishti_guest_profile_${deviceId}`, JSON.stringify(updated));
+      // Also update currently active auth user if guest
+      const activeUser = this.getAuthUser();
+      if (activeUser?.isGuest) {
+        this.setAuthUser(updated, this.getAuthToken());
+      }
+    } catch {}
+    return updated;
+  }
+
+  private getActiveReportsKey(): string {
+    const user = this.getAuthUser();
+    if (user?.isGuest) {
+      const deviceId = this.getDeviceId();
+      return `krishidrishti_guest_reports_${deviceId}`;
+    }
+    return DB_KEYS.REPORTS;
+  }
+
+  // Reports CRUD - Isolated per device for guests, cloud-mirrored for registered farmers
   public getReports(): CropAnalysisReport[] {
     try {
-      const data = localStorage.getItem(DB_KEYS.REPORTS);
+      const key = this.getActiveReportsKey();
+      const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : [];
     } catch (e) {
       console.error('Error reading reports from local storage:', e);
@@ -79,10 +163,11 @@ class LocalDatabase {
 
   public saveReport(report: CropAnalysisReport): void {
     try {
+      const key = this.getActiveReportsKey();
       const reports = this.getReports();
       // Prepend so the newest appears first
       const updated = [report, ...reports.filter((r) => r.id !== report.id)];
-      localStorage.setItem(DB_KEYS.REPORTS, JSON.stringify(updated));
+      localStorage.setItem(key, JSON.stringify(updated));
     } catch (e) {
       console.error('Error saving report to local storage:', e);
     }
@@ -90,9 +175,10 @@ class LocalDatabase {
 
   public deleteReport(id: string): void {
     try {
+      const key = this.getActiveReportsKey();
       const reports = this.getReports();
       const filtered = reports.filter((r) => r.id !== id);
-      localStorage.setItem(DB_KEYS.REPORTS, JSON.stringify(filtered));
+      localStorage.setItem(key, JSON.stringify(filtered));
     } catch (e) {
       console.error('Error deleting report:', e);
     }

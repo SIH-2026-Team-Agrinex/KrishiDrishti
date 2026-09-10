@@ -12,6 +12,7 @@ export interface User {
   };
   cropInterests?: string[];
   createdAt: string;
+  isGuest?: boolean;
 }
 
 export interface AuthState {

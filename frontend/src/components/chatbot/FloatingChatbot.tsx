@@ -25,7 +25,7 @@ import { localDb } from '../../services/db/localDb';
 export const FloatingChatbot: React.FC = () => {
   const { t, language } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const { location } = useLocation();
+  const { location, refreshLocation } = useLocation();
 
   const [liveStatus, setLiveStatus] = useState(() => chatService.getLiveStatus());
   const [isOpen, setIsOpen] = useState(false);
@@ -119,9 +119,15 @@ export const FloatingChatbot: React.FC = () => {
     setTimeout(() => scrollToBottom('smooth'), 50);
 
     try {
+      // Refresh location & real-time weather telemetry before querying model
+      let activeLoc = location;
+      try {
+        activeLoc = await refreshLocation();
+      } catch {}
+
       const botResponse = await chatService.sendMessage(query, {
         cropName: user?.cropInterests?.[0],
-        location,
+        location: activeLoc,
         language,
         sessionId: activeSessionId || undefined,
       });

@@ -351,11 +351,20 @@ export const cropAnalysisService = {
         if (payload.additionalInfo) formData.append('additional_information', payload.additionalInfo);
         if (payload.location?.latitude) formData.append('latitude', String(payload.location.latitude));
         if (payload.location?.longitude) formData.append('longitude', String(payload.location.longitude));
+        if (payload.location?.city || payload.location?.state) {
+          const locStr = [payload.location.city, payload.location.state].filter(Boolean).join(', ');
+          formData.append('location_name', locStr);
+        }
         formData.append('language', lang);
         if (payload.soilMoistureObserved) formData.append('soil_moisture_observed', payload.soilMoistureObserved);
         if (payload.crossQuestionAnswers) {
           formData.append('cross_question_answers', JSON.stringify(payload.crossQuestionAnswers));
         }
+
+        const currentUser = localDb.getAuthUser();
+        if (currentUser?.id) formData.append('farmer_id', currentUser.id);
+        if (currentUser?.name) formData.append('farmer_name', currentUser.name);
+        formData.append('is_guest', String(Boolean(currentUser?.isGuest)));
 
         onStageUpdate?.('environmental_sync', 45);
         onStageUpdate?.('ml_analyzing', 70);

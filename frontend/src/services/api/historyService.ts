@@ -10,12 +10,16 @@ export interface HistoryFilter {
 
 export const historyService = {
   async getAllReports(filters?: HistoryFilter): Promise<CropAnalysisReport[]> {
-    if (!ENV_CONFIG.USE_LOCAL_DB && ENV_CONFIG.HISTORY_API_URL) {
+    const currentUser = localDb.getAuthUser();
+
+    // Guests keep all test history strictly isolated on their local device
+    if (!currentUser?.isGuest && !ENV_CONFIG.USE_LOCAL_DB && ENV_CONFIG.HISTORY_API_URL) {
       try {
         const queryParams: Record<string, string> = {};
         if (filters?.crop) queryParams.crop = filters.crop;
         if (filters?.riskLevel) queryParams.risk = filters.riskLevel;
         if (filters?.searchQuery) queryParams.q = filters.searchQuery;
+        if (currentUser?.id) queryParams.farmer_id = currentUser.id;
 
         return await apiClient<CropAnalysisReport[]>(ENV_CONFIG.HISTORY_API_URL, {
           params: queryParams,

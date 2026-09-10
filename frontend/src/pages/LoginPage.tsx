@@ -11,8 +11,8 @@ export const LoginPage: React.FC = () => {
   const { showToast } = useNotification();
   const navigate = useNavigate();
 
-  const [identifier, setIdentifier] = useState('ramesh.farmer@krishidrishti.in');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 

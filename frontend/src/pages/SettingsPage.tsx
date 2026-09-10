@@ -7,7 +7,6 @@ import {
   Settings, 
   User as UserIcon, 
   Save, 
-  Check, 
   Plus,
   X,
   MapPin
@@ -19,36 +18,25 @@ export const SettingsPage: React.FC = () => {
   const { location, setManualLocation } = useLocation();
   const { showToast } = useNotification();
 
-  const [name, setName] = useState(user?.name || 'Ramesh Patel');
-  const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
-  const [userCity, setUserCity] = useState(location.city || 'My Farm');
-  const [userState, setUserState] = useState(location.state || 'India');
-  const [selectedCrops, setSelectedCrops] = useState<string[]>(user?.cropInterests || ['Tomato', 'Wheat']);
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [userCity, setUserCity] = useState(user?.farmLocation?.villageOrCity || (location.isCustomLocation ? location.city : ''));
+  const [userState, setUserState] = useState(user?.farmLocation?.state || (location.isCustomLocation ? location.state : ''));
+  const [selectedCrops, setSelectedCrops] = useState<string[]>(user?.cropInterests || []);
   const [customCropInput, setCustomCropInput] = useState('');
 
-  const [allCropOptions, setAllCropOptions] = useState([
-    'Tomato', 'Wheat', 'Rice / Paddy', 'Cotton', 'Onion', 'Potato', 
-    'Mustard', 'Chilli', 'Sugarcane', 'Maize', 'Apple', 'Mango', 
-    'Ginger', 'Garlic', 'Groundnut', 'Soybean', 'Turmeric', 'Tea', 'Coffee'
-  ]);
-
-  const toggleCrop = (crop: string) => {
-    setSelectedCrops((prev) =>
-      prev.includes(crop) ? prev.filter((c) => c !== crop) : [...prev, crop]
-    );
-  };
-
-  const handleAddCustomCrop = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddCustomCrop = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const trimmed = customCropInput.trim();
     if (!trimmed) return;
-    if (!allCropOptions.includes(trimmed)) {
-      setAllCropOptions((prev) => [trimmed, ...prev]);
-    }
-    if (!selectedCrops.includes(trimmed)) {
+    if (!selectedCrops.map(c => c.toLowerCase()).includes(trimmed.toLowerCase())) {
       setSelectedCrops((prev) => [...prev, trimmed]);
     }
     setCustomCropInput('');
+  };
+
+  const handleRemoveCrop = (cropToRemove: string) => {
+    setSelectedCrops((prev) => prev.filter((c) => c !== cropToRemove));
   };
 
   const handleSaveProfile = (e: React.FormEvent) => {
@@ -103,6 +91,7 @@ export const SettingsPage: React.FC = () => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Farmer Name"
                 className="w-full px-4 py-3 bg-white rounded-2xl border border-slate-200 focus:border-agro-500 focus:outline-none text-xs sm:text-sm shadow-sm"
               />
             </div>
@@ -115,6 +104,7 @@ export const SettingsPage: React.FC = () => {
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. 9876543210"
                 className="w-full px-4 py-3 bg-white rounded-2xl border border-slate-200 focus:border-agro-500 focus:outline-none text-xs sm:text-sm shadow-sm"
               />
             </div>
@@ -153,54 +143,63 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Any Crops Selection & Custom Addition */}
+          {/* Manual Crops Management */}
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-slate-700">
-                {t('auth_crops_grown_label')} (Select or add ANY crops)
-              </label>
-            </div>
-
-            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50/70 rounded-2xl border border-slate-200">
-              {allCropOptions.map((crop) => {
-                const isSelected = selectedCrops.includes(crop);
-                return (
-                  <button
-                    key={crop}
-                    type="button"
-                    onClick={() => toggleCrop(crop)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-agro-600 border-agro-600 text-white font-semibold shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-agro-300'
-                    }`}
-                  >
-                    {isSelected ? <Check className="w-3 h-3" /> : null}
-                    <span>{crop}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <label className="block text-xs font-bold text-slate-700">
+              {t('auth_crops_grown_label')} (Add manually)
+            </label>
 
             {/* Custom Crop Add field */}
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={customCropInput}
                 onChange={(e) => setCustomCropInput(e.target.value)}
-                placeholder="+ Type any other crop name..."
-                className="px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs focus:border-agro-500 focus:outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomCrop();
+                  }
+                }}
+                placeholder="Type crop name (e.g. Wheat, Mustard, Cotton)..."
+                className="flex-1 px-3.5 py-2.5 bg-white rounded-xl border border-slate-200 text-xs focus:border-agro-500 focus:outline-none shadow-sm"
               />
               <button
                 type="button"
-                onClick={handleAddCustomCrop}
+                onClick={() => handleAddCustomCrop()}
                 disabled={!customCropInput.trim()}
-                className="px-3 py-2 bg-agro-100 hover:bg-agro-200 disabled:opacity-40 text-agro-800 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors"
+                className="px-4 py-2.5 bg-agro-600 hover:bg-agro-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Crop</span>
               </button>
             </div>
+
+            {/* Manually added crops badges */}
+            {selectedCrops.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 p-2.5 bg-slate-50/70 rounded-2xl border border-slate-200">
+                {selectedCrops.map((crop) => (
+                  <span
+                    key={crop}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-agro-50 text-agro-800 border border-agro-200 shadow-2xs"
+                  >
+                    <span>{crop}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCrop(crop)}
+                      className="hover:text-rose-600 text-slate-400 focus:outline-none transition-colors"
+                      title="Remove crop"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-400 italic">
+                No crops listed yet. Type your crop name above and click "Add Crop".
+              </p>
+            )}
           </div>
 
           <div className="pt-4 border-t border-agro-100 flex justify-end">

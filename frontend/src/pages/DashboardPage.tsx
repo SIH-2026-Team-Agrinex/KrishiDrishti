@@ -23,9 +23,14 @@ import {
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { t, language } = useLanguage();
-  const { location } = useLocation();
+  const { location, refreshLocation } = useLocation();
   const navigate = useNavigate();
   const [reports, setReports] = useState<CropAnalysisReport[]>([]);
+
+  // Refetch and refresh fresh location and weather whenever entering dashboard
+  useEffect(() => {
+    refreshLocation();
+  }, []);
 
   useEffect(() => {
     const loadReports = async () => {

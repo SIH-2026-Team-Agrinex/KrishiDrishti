@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, LoginCredentials, SignupData } from '../types/auth.types';
 import { authService } from '../services/api/authService';
+import { localDb } from '../services/db/localDb';
+import { getRealTimeTestLocation } from './LocationContext';
+import { weatherService } from '../services/api/weatherService';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await authService.login(credentials);
       setUser(res.user);
       setToken(res.token);
+      // Refresh location & pre-fetch weather upon login
+      try {
+        const freshLoc = await getRealTimeTestLocation();
+        await weatherService.getCurrentWeather(freshLoc);
+      } catch {}
     } finally {
       setIsLoading(false);
     }
@@ -48,6 +56,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await authService.signup(data);
       setUser(res.user);
       setToken(res.token);
+      try {
+        const freshLoc = await getRealTimeTestLocation();
+        await weatherService.getCurrentWeather(freshLoc);
+      } catch {}
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +71,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await authService.guestLogin();
       setUser(res.user);
       setToken(res.token);
+      try {
+        const freshLoc = await getRealTimeTestLocation();
+        await weatherService.getCurrentWeather(freshLoc);
+      } catch {}
     } finally {
       setIsLoading(false);
     }
@@ -70,16 +86,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
   };
 
-  const updateUserPreferences = (updated: Partial<User>) => {
+  const updateUserPreferences = async (updated: Partial<User>) => {
     if (!user) return;
-    const newUser = { ...user, ...updated };
-    setUser(newUser);
-    if (token) {
-      authService.login({ identifier: newUser.email }).catch(() => {});
-      // Also directly persist to localDb so modified user state is never overwritten
-      import('../services/db/localDb').then(({ localDb }) => {
-        localDb.setAuthUser(newUser, token);
-      });
+    try {
+      const newUser = await authService.updateUser(user.id, updated);
+      setUser(newUser);
+    } catch {
+      const newUser = { ...user, ...updated };
+      setUser(newUser);
+      localDb.setAuthUser(newUser, token);
     }
   };
 
@@ -104,6 +119,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    return {
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: async () => {},
+      signup: async () => {},
+      guestLogin: () => {},
+      logout: () => {},
+      updateUserPreferences: () => {},
+    };
+  }
   return context;
 };
