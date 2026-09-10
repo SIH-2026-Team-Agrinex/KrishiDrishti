@@ -13,6 +13,7 @@ import {
   Bot,
   Layers
 } from 'lucide-react';
+import { IndiaHeatmapDashboard } from '../components/analytics/IndiaHeatmapDashboard';
 
 export const LandingPage: React.FC = () => {
   const { t } = useLanguage();
@@ -254,7 +255,10 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. FINAL CTA BANNER */}
+      {/* 4. NATIONAL OUTBREAK & CLIMATE HEATMAP ANALYTICS */}
+      <IndiaHeatmapDashboard />
+
+      {/* 5. FINAL CTA BANNER */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-tr from-agro-900 via-agro-800 to-emerald-900 text-white p-8 sm:p-14 text-center relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/20 rounded-full blur-3xl" />

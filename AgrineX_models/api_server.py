@@ -1223,8 +1223,24 @@ async def handle_chat_message(req: ChatQueryRequest):
     raise HTTPException(status_code=502, detail="No response from Groq models")
 
 
+@app.get("/api/analytics/heat-map")
+@app.get("/analytics/heat-map")
+async def get_heatmap_analytics():
+    """
+    Returns state-wise and district-wise disease/pest/weather intensity analytics
+    calculated from platform diagnosis tests and meteorological models.
+    """
+    try:
+        data = db_service.get_heatmap_analytics()
+        return data
+    except Exception as e:
+        print(f"[API ERROR in /api/analytics/heat-map]: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
     uvicorn.run(app, host=host, port=port)
+
