@@ -8,7 +8,7 @@
 [![Neon PostgreSQL](https://img.shields.io/badge/Neon-PostgreSQL-00E599?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-> **Team Agri-NEX — Smart India Hackathon (SIH 2026)**  
+> **Team Agro-NovaX — Smart India Hackathon (SIH 2026)**  
 > An enterprise-grade agricultural diagnostics and field intelligence platform fusing **deep learning computer vision**, **real-time environmental telemetry**, **predictive risk engines**, and **generative AI agronomists** to protect crop yields and empower farmers.
 
 ---
@@ -269,11 +269,11 @@ This project is pre-configured to run completely free without any credit card:
 
 ---
 
-## 👥 Team Agri-NEX (SIH 2026)
+## 👥 Team Agro-NovaX (SIH 2026)
 
 Developed with dedication for the **Smart India Hackathon (SIH 2026)** to bring cutting-edge AI technology straight to the agricultural grassroots.
 
-- **Organization:** [SIH-2026-Team-Agrinex](https://github.com/SIH-2026-Team-Agrinex)
+- **Organization:** [SIH-2026-Team-Agronovax](https://github.com/SIH-2026-Team-Agrinex)
 - **Repository:** [KrishiDrishti](https://github.com/SIH-2026-Team-Agrinex/KrishiDrishti)
 
 ---
